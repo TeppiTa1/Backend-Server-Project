@@ -1,28 +1,71 @@
-#import Flask library into the program
+#import Flask library and SQLAlchemy that support Flask into the program
 from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
 
-# 2. Create an instance of the Flask class
-# This is an essential concept in programming called: Object - Oriented Programming
-# Class is basically a blueprint within the library of 'Flask' that defines things that a web server needs to know 
-# (ie. handle web request, understand URL etc.)
-# Instance is the actual stuff that I going to build
+# Create an instance of the Flask class
 app = Flask(__name__)
-# Double underscore name (__name__) is just a special module in python, allowing Flask know where to look for templete file
 
-# 3. Define a "route" for the homepage
-# The @app.route('/') decorator tells Flask: 
-# "When someone visits the main homepage ('/'), run the function below."
-@app.route("/")
-# @ signifies its a Decorator
+# --- DATABASE CONFIGURATION ---
+# This is the code that tells SQLAlchemy where our database is.
+# Format: mysql+pymysql://<username>:<password>@<host>/<database_name>
+# For XAMPP default: username is 'root', there is no password, host is 'localhost', and the project's database 'dofe_project'
+# app.config[] can be understand as a dictionary that hold all the configuration setting for Flask app
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:@localhost/dofe_project'
+# URI stand for Uniform Resource Identifier - essentially the "address" of your database.
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# Disable unwanted feature of SQLAlchemy that isn't needed for this project
+db = SQLAlchemy(app)
+# Creates the actual instance of the SQLAlchemy translator and links it directly to the Flask app. This 'database' object is now your primary tool for all database operations.
+
+# Create a python class named 'User'. This 'User' class will inherits from database.Model, which is a base class that is provided by Flask-SQLAlchemy
+# Essentially give the User class all the database powes
+# Model : A class that represent a database table
+class User(db.Model):
+    # __tablename__ specify the name of the database table that this class represents
+    __tablename__ = 'users'
+    # db.Column means this is a column in the database table
+    # db.Integer means the data type of this column is Integer
+    # primary_key = True means this column is the primary key of the table
+    id = db.Column(db.Integer, primary_key = True)
+    username = db.Column(db.String(80), unique = True, nullable = False)
+    # unique = True means this column must have unique value for each row
+    # nullable = False means this column cannot be empty
+    # db.String(<number>) means the data type of this column is String with maximum length of <number> characters
+    email = db.Column(db.String(120), unique = True, nullable = False)
+    password_hash = db.Column(db.String(120), nullable = False)
+
+    # This is a special type of method that is used to represent(__repr__) the object as a string
+    # It defines a string that will be printed if you ever try to print a User object. 
+    def __repr__(self):
+        # in this example, it will return the string '<User {username}>', where {username} is replaced with the actual username of the User object.
+        return f'<User {self.username}>'
+    
+# --- ROUTES ---
+# define a route for the home page
+@app.route('/')
 def home():
-    # 4. The function that runs for this route
-    # Because its in a function, it need to return something to display it in the browser
-    return True
+    return "Hello, DOFE Project!"
 
-# 5. A standard Python block that ensures this code only runs
-# when you execute the script directly (not when it's imported by another script)
-if __name__ == "__main__":
-    # 6. Start the Flask development server
-    # debug=True allow the server to auto-reload when a save changes
-    # it also provide better error messages
-    app.run(debug = True)
+# A new route to test our database connection
+@app.route('/testdb')
+def test_db_connection():
+    try:
+        # This is how you query the database with SQLAlchemy
+        # Here we are trying to get the first user from the User table
+        user = User.query.first()
+        # If there is at least one user, display the username
+        if user:
+            return f'<h1>Success!</h1><p>The first user in the database is: {user.username}</p>'
+        else:
+            # If there are no users in the table, inform the user
+            return '<h1>Success!</h1><p>The connection is working, but the user table is empty.</p>'
+    except Exception as e:
+        # If there is any error, display the error message
+        return f'<h1>Error!</h1><p>There was an error connecting to the database: {e}</p>'
+    
+# --- RUN THE APP ---
+# like last time, this code check if it is being run directly (not imported as a module in another script)
+if __name__ == '__main__':
+    app.run(debug=True)
+
+

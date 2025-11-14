@@ -63,6 +63,28 @@ def test_db_connection():
         # If there is any error, display the error message
         return f'<h1>Error!</h1><p>There was an error connecting to the database: {e}</p>'
     
+# Add the new registration route
+@app.route('/register',methods=['GET', 'POST'])
+def register():
+    # This block runs when the user SUBMITS the form (a POST request)
+    if request.method == 'POST':
+        
+        # Get form data
+        username = request.form.get('username')
+        email = request.form.get('email')
+        password = request.form.get('password')
+
+        # Create a new user instance
+        new_user = User(username=username, email=email, password_hash=password)
+
+        # Add the new user to the database
+        db.session.add(new_user)   
+        db.session.commit()
+
+        return redirect(url_for('home'))
+    # This runs when the user FIRST VISITS the page (a GET request)
+    # It just shows them the registration form.
+    return render_template('register.html')
 # --- RUN THE APP ---
 # like last time, this code check if it is being run directly (not imported as a module in another script)
 if __name__ == '__main__':

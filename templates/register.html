@@ -17,7 +17,24 @@
       action="/register": This tells the browser where to send the data (to our /register URL).
       method="POST": This specifies HOW to send the data. POST is used for sending data to create or update something.
     -->
-      
+      <form action="/register" method="POST">
+        <div>
+            <label for="username">Username:</label>
+            <input type="text" id="username" name="username" required>
+        </div>
+        <br>
+        <div>
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email" required>
+        </div>
+        <br>
+        <div>
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" required>
+        </div>
+        <br>
+        <button type="submit">Register</button>
+    </form>
 
 </body>
 </html>

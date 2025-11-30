@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Home</title>
+</head>
+<body>
+    
+    <!-- The Jinja2 logic: Check if the 'user' variable was passed -->
+    {% if user %}
+        <!-- THIS BLOCK SHOWS IF LOGGED IN -->
+        <h1 style="color: green;">Welcome back, {{ user.username }}!</h1>
+        <p>Your email is: {{ user.email }}</p>
+        
+        <a href="/logout"><button>Logout</button></a>
+        
+        <hr>
+        <h3>All Members:</h3>
+        <!-- You would need to pass the 'users' list again to see this, 
+             but for now let's focus on the welcome message. -->
+
+    {% else %}
+        <!-- THIS BLOCK SHOWS IF LOGGED OUT (GUEST) -->
+        <h1>Welcome, Guest!</h1>
+        <p>You are not logged in.</p>
+        <a href="/login">Login</a> | <a href="/register">Register</a>
+    {% endif %}
+
+</body>
+</html>

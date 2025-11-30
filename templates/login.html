@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login Interface</title>
+</head>
+<body>
+    <h1>Login</h1>
+    
+    <!-- We might send an error message from Python if the password is wrong -->
+    {% if error %}
+        <p style="color: red;">{{ error }}</p>
+    {% endif %}
+
+    <form action="/login" method="POST">
+        <div>
+            <label for="username">Username:</label>
+            <input type="text" id="username" name="username" required>
+        </div>
+        <br>
+        <div>
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" required>
+        </div>
+        <br>
+        <button type="submit">Login</button>
+    </form>
+    
+    <p>Don't have an account? <a href="/register">Register here</a></p>
+</body>
+</html>

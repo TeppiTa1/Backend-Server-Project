@@ -1,9 +1,10 @@
 #import Flask library and SQLAlchemy that support Flask into the program
-from flask import Flask
+from flask import Flask, render_template, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 
 # Create an instance of the Flask class
 app = Flask(__name__)
+app.secret_key = "Super_Secret_DoFe_Key"  # Needed for session management and flash messages
 
 # --- DATABASE CONFIGURATION ---
 # This is the code that tells SQLAlchemy where our database is.
@@ -32,7 +33,7 @@ class User(db.Model):
     # nullable = False means this column cannot be empty
     # db.String(<number>) means the data type of this column is String with maximum length of <number> characters
     email = db.Column(db.String(120), unique = True, nullable = False)
-    password_hash = db.Column(db.String(120), nullable = False)
+    password_hash = db.Column(db.String(255), nullable = False)
 
     # This is a special type of method that is used to represent(__repr__) the object as a string
     # It defines a string that will be printed if you ever try to print a User object. 
@@ -44,8 +45,8 @@ class User(db.Model):
 # define a route for the home page
 @app.route('/')
 def home():
-    return "Hello, DOFE Project!"
-
+    users = User.query.all() # This gets ALL users from the table
+    return render_template('home.html', users=users)
 # A new route to test our database connection
 @app.route('/testdb')
 def test_db_connection():
@@ -68,7 +69,7 @@ def test_db_connection():
 def register():
     # This block runs when the user SUBMITS the form (a POST request)
     if request.method == 'POST':
-        
+
         # Get form data
         username = request.form.get('username')
         email = request.form.get('email')

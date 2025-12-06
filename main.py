@@ -1,6 +1,8 @@
 #import Flask library and SQLAlchemy that support Flask into the program
-from flask import Flask, render_template, request, redirect, url_for
+from flask_bcrypt import Bcrypt
+from flask import Flask, render_template, request, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # Create an instance of the Flask class
 app = Flask(__name__)
@@ -17,6 +19,8 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # Disable unwanted feature of SQLAlchemy that isn't needed for this project
 db = SQLAlchemy(app)
 # Creates the actual instance of the SQLAlchemy translator and links it directly to the Flask app. This 'database' object is now your primary tool for all database operations.
+
+bcrypt = Bcrypt(app)
 
 # Create a python class named 'User'. This 'User' class will inherits from database.Model, which is a base class that is provided by Flask-SQLAlchemy
 # Essentially give the User class all the database powes
@@ -45,9 +49,73 @@ class User(db.Model):
 # define a route for the home page
 @app.route('/')
 def home():
-    users = User.query.all() # This gets ALL users from the table
-    return render_template('home.html', users=users)
+    if 'user_id' in session:
+    # If the user is logged in, retrieve their information from the database
+        user_id = session['user_id']
+        current_user = User.query.get(user_id)
+
+        return render_template('home.html', user=current_user)
+    else:
+        return render_template('home.html', user=None)
 # A new route to test our database connection
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    # If user is already logged in, redirect to home
+    if 'user_id' in session:
+        return redirect(url_for('home'))
+    
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+
+        # Query the database for a user with the provided username
+        user = User.query.filter_by(username=username).first()
+
+        # check_password_hash takes two arguments:
+        # 1. The HASH stored in the database (user.password_hash)
+        # 2. The PLAIN password the user just typed (password)
+        # It handles the un-mashing and comparison securely behind the scenes
+        if user and check_password_hash(user.password_hash, password):
+            # Store user ID in session to keep the user logged in
+            session['user_id'] = user.id
+            return redirect(url_for('home'))
+        else:
+            return render_template('login.html', error='Invalid username or password')
+    
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    # Remove user ID from session to log the user out
+    session.pop('user_id', None)
+    return redirect(url_for('home'))
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        email = request.form.get('email')
+        password = request.form.get('password')
+
+        # Check if the username or email already exists
+        existing_user = User.query.filter((User.username == username) | (User.email == email)).first()
+        if existing_user:
+            return "User with that username or email already exists!"
+        
+        # Create a new user instance
+        #new_user = User(username=username, email=email, password_hash=password) <- Insecure way
+        # Secure way: Hash the password before storing it
+        hashed_password = generate_password_hash(password, method='scrypt')
+        
+        new_user = User(username=username, email=email, password_hash=hashed_password)
+        db.session.add(new_user)
+        db.session.commit()
+        return redirect(url_for('login')) # Redirect to login page after successful registration
+    return render_template('register.html')
+
+
+
+
 @app.route('/testdb')
 def test_db_connection():
     try:
@@ -64,28 +132,7 @@ def test_db_connection():
         # If there is any error, display the error message
         return f'<h1>Error!</h1><p>There was an error connecting to the database: {e}</p>'
     
-# Add the new registration route
-@app.route('/register',methods=['GET', 'POST'])
-def register():
-    # This block runs when the user SUBMITS the form (a POST request)
-    if request.method == 'POST':
 
-        # Get form data
-        username = request.form.get('username')
-        email = request.form.get('email')
-        password = request.form.get('password')
-
-        # Create a new user instance
-        new_user = User(username=username, email=email, password_hash=password)
-
-        # Add the new user to the database
-        db.session.add(new_user)   
-        db.session.commit()
-
-        return redirect(url_for('home'))
-    # This runs when the user FIRST VISITS the page (a GET request)
-    # It just shows them the registration form.
-    return render_template('register.html')
 # --- RUN THE APP ---
 # like last time, this code check if it is being run directly (not imported as a module in another script)
 if __name__ == '__main__':

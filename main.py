@@ -1,6 +1,6 @@
 #import Flask library and SQLAlchemy that support Flask into the program
 from flask_bcrypt import Bcrypt
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -49,14 +49,14 @@ class User(db.Model):
 # define a route for the home page
 @app.route('/')
 def home():
+    users = User.query.all() # Get all users
     if 'user_id' in session:
     # If the user is logged in, retrieve their information from the database
         user_id = session['user_id']
         current_user = User.query.get(user_id)
-
-        return render_template('home.html', user=current_user)
+        return render_template('home.html', user=current_user, users=users)
     else:
-        return render_template('home.html', user=None)
+        return render_template('home.html', user=None, users=users)
 # A new route to test our database connection
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -78,9 +78,11 @@ def login():
         if user and check_password_hash(user.password_hash, password):
             # Store user ID in session to keep the user logged in
             session['user_id'] = user.id
+            flash("Logged in successfully!", "success")
             return redirect(url_for('home'))
         else:
-            return render_template('login.html', error='Invalid username or password')
+            flash("Invalid username or password.", "error")
+            return redirect(url_for('login'))
     
     return render_template('login.html')
 
@@ -88,6 +90,7 @@ def login():
 def logout():
     # Remove user ID from session to log the user out
     session.pop('user_id', None)
+    flash("You have been logged out.", "success")
     return redirect(url_for('home'))
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -97,10 +100,31 @@ def register():
         email = request.form.get('email')
         password = request.form.get('password')
 
+        # Basic password validation
+        #if password is less than 8 characters, flash error message and redirect back to register page
+        if len(password) < 8:
+            flash("Password must be at least 8 characters long!", "error")
+            return redirect(url_for('register'))
+        #if password does not contain at least one number, flash error message and redirect back to register page
+        if not any(char.isdigit() for char in password):
+            flash("Password must contain at least one number!", "error")
+            return redirect(url_for('register'))
+        #if password does not contain at least one uppercase letter, flash error message and redirect back to register page
+        if not any(char.isupper() for char in password):
+            flash("Password must contain at least one uppercase letter!", "error")
+            return redirect(url_for('register'))
+        #if password does not contain at least one special character, flash error message and redirect back to register page
+        special_characters = "!@#$%^&*()-+?_=,<>/"
+        if not any(char in special_characters for char in password):
+            flash("Password must contain at least one special character!", "error")
+            return redirect(url_for('register'))
+        
+
         # Check if the username or email already exists
         existing_user = User.query.filter((User.username == username) | (User.email == email)).first()
         if existing_user:
-            return "User with that username or email already exists!"
+            flash("User with that name already exist!", "error")
+            return redirect(url_for('register'))
         
         # Create a new user instance
         #new_user = User(username=username, email=email, password_hash=password) <- Insecure way
@@ -110,7 +134,8 @@ def register():
         new_user = User(username=username, email=email, password_hash=hashed_password)
         db.session.add(new_user)
         db.session.commit()
-        return redirect(url_for('login')) # Redirect to login page after successful registration
+        flash("Account created successfully! You will now be redirected to login page...", "success")
+        return redirect(url_for('login'))
     return render_template('register.html')
 
 

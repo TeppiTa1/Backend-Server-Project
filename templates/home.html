@@ -1,19 +1,23 @@
 {% extends "layout.html" %}
-
 {% block content %}
+    
     {% if user %}
-        <h1>Welcome back, {{ user.username }}!</h1>
-        <p>Your email is: {{ user.email }}</p>
-        
-        <hr>
-        <h3>All Members:</h3>
-        <ul>
-            {% for u in users %}
-                <li>{{ u.username }}</li>
-            {% endfor %}
-        </ul>
+        <h1>Welcome, {{ user.username }}!</h1>
+        <a href="/create"><button>+ Create New Post</button></a>
     {% else %}
-        <h1>Welcome, Guest!</h1>
-        <p>Please log in to see the content.</p>
+        <h1>Welcome to the Blog</h1>
+        <p>Login to create a post.</p>
     {% endif %}
+
+    <hr>
+    
+    <h2>Latest Posts:</h2>
+    {% for post in posts %}
+        <div style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
+            <h3>{{ post.title }}</h3>
+            <p>{{ post.content }}</p>
+            <small>Written by: <b>{{ post.author.username }}</b> on {{ post.date_posted.strftime('%Y-%m-%d') }}</small>
+        </div>
+    {% endfor %}
+
 {% endblock %}

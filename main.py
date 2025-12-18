@@ -3,6 +3,7 @@ from flask_bcrypt import Bcrypt
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime
 
 # Create an instance of the Flask class
 app = Flask(__name__)
@@ -39,24 +40,63 @@ class User(db.Model):
     email = db.Column(db.String(120), unique = True, nullable = False)
     password_hash = db.Column(db.String(255), nullable = False)
 
+
+    posts = db.relationship('Post', backref='author', lazy=True)
+
     # This is a special type of method that is used to represent(__repr__) the object as a string
     # It defines a string that will be printed if you ever try to print a User object. 
     def __repr__(self):
         # in this example, it will return the string '<User {username}>', where {username} is replaced with the actual username of the User object.
         return f'<User {self.username}>'
     
+class Post(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100), nullable=False)
+    content = db.Column(db.Text, nullable=False) # 'Text' is for long paragraphs
+    date_posted = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+
+    def __repr__(self):
+        return f'<Post {self.title}>'
+
 # --- ROUTES ---
 # define a route for the home page
 @app.route('/')
 def home():
+    posts = Post.query.all() 
     users = User.query.all() # Get all users
     if 'user_id' in session:
-    # If the user is logged in, retrieve their information from the database
-        user_id = session['user_id']
-        current_user = User.query.get(user_id)
-        return render_template('home.html', user=current_user, users=users)
+        user = User.query.get(session['user_id'])
+        return render_template('home.html', posts=posts, user=user)
     else:
-        return render_template('home.html', user=None, users=users)
+        return render_template('home.html', posts=posts, user=None)
+    
+
+@app.route('/create', methods=['GET', 'POST'])
+def create_post():
+    # 1. SECURITY CHECK: Is the user logged in?
+    if 'user_id' not in session:
+        flash("You must be logged in to create a post.", "error")
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        title = request.form.get('title')
+        content = request.form.get('content')
+        
+        # 2. Get the current user's ID from the session
+        current_user_id = session['user_id']
+
+        # 3. Create the Post, assigning the Foreign Key (user_id)
+        new_post = Post(title=title, content=content, user_id=current_user_id)
+        
+        db.session.add(new_post)
+        db.session.commit()
+        
+        flash("Post created successfully!", "success")
+        return redirect(url_for('home'))
+
+    return render_template('create_post.html')
+
 # A new route to test our database connection
 @app.route('/login', methods=['GET', 'POST'])
 def login():

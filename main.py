@@ -1,6 +1,6 @@
 #import Flask library and SQLAlchemy that support Flask into the program
 from flask_bcrypt import Bcrypt
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, abort
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
@@ -196,7 +196,47 @@ def test_db_connection():
     except Exception as e:
         # If there is any error, display the error message
         return f'<h1>Error!</h1><p>There was an error connecting to the database: {e}</p>'
+
+# --- UPDATE POST ROUTE ---    
+@app.route('/post/<int:post_id>/update', methods=['GET', 'POST'])
+def update_post(post_id):
+    # 1. Fetch the post from the DB by ID. 
+    # If it doesn't exist, return a 404 error automatically.
+    post = Post.query.get_or_404(post_id)
+
+    # 2. CHECK AUTHORIZATION
+    # Is the user logged in? AND Is the logged-in user the author?
+    if 'user_id' not in session or post.author.id != session['user_id']:
+        abort(403) # 403 means "Forbidden" - You don't have permission.
     
+    if request.method == 'POST':
+        # 3. Update the post data
+        post.title = request.form.get('title')
+        post.content = request.form.get('content')
+        
+        # 4. Commit changes (No need to db.session.add() for updates)
+        db.session.commit()
+    
+        flash('Your post has been updated!', 'success')
+        return redirect(url_for('home'))
+
+    return render_template('update_post.html', post=post)
+
+# --- DELETE POST ROUTE ---
+@app.route('/post/<int:post_id>/delete', methods=['POST'])
+def delete_post(post_id):
+    post = Post.query.get_or_404(post_id)
+
+    # 1. CHECK AUTHORIZATION (Crucial!)
+    if 'user_id' not in session or post.author.id != session['user_id']:
+        abort(403)
+    
+    # 2. Delete the post
+    db.session.delete(post)
+    db.session.commit()
+    
+    flash('Your post has been deleted!', 'success')
+    return redirect(url_for('home'))
 
 # --- RUN THE APP ---
 # like last time, this code check if it is being run directly (not imported as a module in another script)

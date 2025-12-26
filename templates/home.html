@@ -16,8 +16,21 @@
         <div style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
             <h3>{{ post.title }}</h3>
             <p>{{ post.content }}</p>
-            <small>Written by: <b>{{ post.author.username }}</b> on {{ post.date_posted.strftime('%Y-%m-%d') }}</small>
+            <small>Written by: <b>{{ post.author.username }}</b></small>
+            
+            <!-- AUTHORIZATION CHECK IN HTML -->
+            <!-- Check if a user is logged in AND if that user owns this post -->
+            {% if user and user.id == post.author.id %}
+                <div style="margin-top: 10px;">
+                    <a href="/post/{{ post.id }}/update"><button>Edit</button></a>
+                    
+                    <!-- Delete needs to be a FORM to send a POST request (Security best practice) -->
+                    <form action="/post/{{ post.id }}/delete" method="POST" style="display:inline;">
+                        <button type="submit" style="background-color: #f44336; color: white; border: none; padding: 5px 10px; cursor: pointer;">Delete</button>
+                    </form>
+                </div>
+            {% endif %}
+            
         </div>
     {% endfor %}
-
 {% endblock %}

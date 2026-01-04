@@ -1,0 +1,18 @@
+{% extends "layout.html" %}
+
+{% block content %}
+    <h1>{{ user.username }}'s Profile</h1>
+    <p>Email: {{ user.email }}</p>
+    <p>Total Posts: {{ posts|length }}</p>
+    
+    <hr>
+    
+    <h2>Posts by {{ user.username }}:</h2>
+    {% for post in posts %}
+        <div style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
+            <h3><a href="#" style="text-decoration: none; color: black;">{{ post.title }}</a></h3>
+            <p>{{ post.content }}</p>
+            <small>Posted on {{ post.date_posted.strftime('%Y-%m-%d') }}</small>
+        </div>
+    {% endfor %}
+{% endblock %}

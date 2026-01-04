@@ -16,7 +16,7 @@
         <div style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
             <h3>{{ post.title }}</h3>
             <p>{{ post.content }}</p>
-            <small>Written by: <b>{{ post.author.username }}</b></small>
+            <small>Written by: <a href="/user/{{ post.author.username }}"><b>{{ post.author.username }}</b></a>
             
             <!-- AUTHORIZATION CHECK IN HTML -->
             <!-- Check if a user is logged in AND if that user owns this post -->

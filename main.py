@@ -238,6 +238,51 @@ def delete_post(post_id):
     flash('Your post has been deleted!', 'success')
     return redirect(url_for('home'))
 
+@app.route('/account', methods=['GET', 'POST'])
+def account():
+    # SECURITY CHECK: Is the user logged in?
+    if 'user_id' not in session:
+        flash("You must be logged in to view your account.", "error")
+        return redirect(url_for('login'))
+    
+    user_id = session['user_id']
+    current_user = User.query.get(user_id)
+
+    if request.method == 'POST':
+        new_email = request.form.get('email')
+        new_username = request.form.get('username')
+
+        # 2. Check if they are trying to use a username that is ALREADY taken
+        # (But ignore if it's their own current username)
+        if new_username != current_user.username:
+            existing_user = User.query.filter_by(username=new_username).first()
+            if existing_user:
+                flash("Username already taken. Please choose a different one.", "error")
+                return redirect(url_for('account')) 
+
+        # 3. Update user information
+        current_user.email = new_email
+        current_user.username = new_username
+        db.session.commit()
+
+        flash("Your account has been updated!", "success")
+        return redirect(url_for('account'))
+    return render_template('account.html', current_user=current_user)
+
+@app.route('/user/<string:username>')
+def user_profile(username):
+    # 1. Find the user by name. If they don't exist, show 404 error.
+    user = User.query.filter_by(username=username).first_or_404()
+
+    # 2. Get all posts by this user
+    posts = user.posts 
+    
+    # check if *I* am logged in (for the navbar)
+    current_user = None
+    if 'user_id' in session:
+        current_user = User.query.get(session['user_id'])
+    return render_template('user_posts.html', user=user, posts=posts, current_user=current_user)
+
 # --- RUN THE APP ---
 # like last time, this code check if it is being run directly (not imported as a module in another script)
 if __name__ == '__main__':

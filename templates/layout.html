@@ -15,12 +15,13 @@
 
     <!-- A Navigation Bar that appears on every page -->
     <nav>
-        <a href="/">Home</a>
-        {% if session.get('user_id') %}
-            | <a href="/logout">Logout</a>
-        {% else %}
-            | <a href="/login">Login</a> | <a href="/register">Register</a>
-        {% endif %}
+    <a href="/">Home</a>
+    {% if session.get('user_id') %}
+        | <a href="/account">Account</a>
+        | <a href="/logout">Logout</a>
+    {% else %}
+        | <a href="/login">Login</a> | <a href="/register">Register</a>
+    {% endif %}
     </nav>
 
     <!-- LOGIC FOR FLASH MESSAGES -->

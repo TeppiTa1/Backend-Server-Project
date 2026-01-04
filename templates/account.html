@@ -1,0 +1,23 @@
+{% extends "layout.html" %}
+
+{% block content %}
+    <div class="content-section">
+        <h1>Account Settings</h1>
+        <p>Manage your account details below.</p>
+        
+        <form method="POST" action="">
+            <div>
+                <label>Username:</label>
+                <!-- We pre-fill the value with 'current_user.username' -->
+                <input type="text" name="username" value="{{ current_user.username }}" required>
+            </div>
+            <br>
+            <div>
+                <label>Email:</label>
+                <input type="email" name="email" value="{{ current_user.email }}" required>
+            </div>
+            <br>
+            <button type="submit">Update Info</button>
+        </form>
+    </div>
+{% endblock %}

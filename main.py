@@ -1,13 +1,34 @@
+import os
+from dotenv import load_dotenv
 #import Flask library and SQLAlchemy that support Flask into the program
 from flask_bcrypt import Bcrypt
 from flask import Flask, render_template, request, redirect, url_for, session, flash, abort
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_mail import Mail, Message # <--- NEW
+from itsdangerous import URLSafeTimedSerializer # <--- NEW for tokens
 from datetime import datetime
 
+# 3. Load the variables from the .env file
+load_dotenv()
+
+
 # Create an instance of the Flask class
-app = Flask(__name__)
-app.secret_key = "Super_Secret_DoFe_Key"  # Needed for session management and flash messages
+app = Flask(__name__) # Needed for session management and flash messages
+app.secret_key = os.getenv('SECRET_KEY')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DB_URI')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Email Config
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME') # <--- Secure!
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+mail = Mail(app)
+# 3. Serializer for Tokens
+# We use the same secret key as the app to sign the tokens
+serializer = URLSafeTimedSerializer(app.secret_key)
 
 # --- DATABASE CONFIGURATION ---
 # This is the code that tells SQLAlchemy where our database is.
@@ -282,6 +303,66 @@ def user_profile(username):
     if 'user_id' in session:
         current_user = User.query.get(session['user_id'])
     return render_template('user_posts.html', user=user, posts=posts, current_user=current_user)
+
+@app.route('/reset_password', methods=['GET', 'POST'])
+def reset_request():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        user = User.query.filter_by(email=email).first()
+        
+        if user:
+            # Generate a secure token valid for 1800 seconds (30 mins)
+            token = serializer.dumps(user.email, salt='password-reset-salt')
+            
+            # Create the link
+            link = url_for('reset_token', token=token, _external=True)
+            
+            # Send the email
+            msg = Message('Password Reset Request', sender='teppitareal@gmail.com', recipients=[user.email])
+            msg.body = f'Your link is: {link}. It expires in 30 minutes.'
+            mail.send(msg)
+            
+        # Security Best Practice: Always say "If that email exists, we sent a link."
+        # Don't reveal if the email is actually in the DB or not!
+        flash('If an account exists with that email, a reset link has been sent.', 'info')
+        return redirect(url_for('login'))
+        
+    return render_template('reset_request.html')
+
+@app.route('/reset_password/<token>', methods=['GET', 'POST'])
+def reset_token(token):
+    try:
+        # Try to decode the token. 
+        # max_age=1800 ensures it fails if link is > 30 mins old
+        email = serializer.loads(token, salt='password-reset-salt', max_age=1800)
+    except:
+        flash('The reset link is invalid or has expired.', 'error')
+        return redirect(url_for('reset_request'))
+    
+    if request.method == 'POST':
+        password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
+
+        # Find user and update password
+        user = User.query.filter_by(email=email).first_or_404()
+
+        if password != confirm_password:
+            flash('Passwords do not match! Please try again.', 'error')
+            # Important: Redirect back to the SAME page so they can try again
+            return redirect(url_for('reset_token', token=token))
+        
+        if check_password_hash(user.password_hash, password):
+            flash('Your new password cannot be the same as your old password.', 'error')
+            return redirect(url_for('reset_token', token=token))
+
+        hashed_password = generate_password_hash(password, method='scrypt')
+        user.password_hash = hashed_password
+        db.session.commit()
+        
+        flash('Your password has been updated! You can now log in.', 'success')
+        return redirect(url_for('login'))
+        
+    return render_template('reset_token.html')
 
 # --- RUN THE APP ---
 # like last time, this code check if it is being run directly (not imported as a module in another script)
